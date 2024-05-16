@@ -181,17 +181,19 @@ const refreshAccessToken = asyncHandler(async(req, res) => {
   
     const decodeToken = jwt.verify(incomingToken,process.env.ACCESS_TOKEN_SECRET)
   
-    if (!decodeToken) {
-      throw new ApiError(401, 'you are not a valid user')
-    }
+    
   
-    const user = await User.findById(decodeToken._id)
-  
-    if (incomingToken !== user.refreshToken) {
+    const user = await User.findById(decodeToken?._id)
+
+    if (!user) {
+        throw new ApiError(401, 'you have not valid token')
+      }
+
+    if (incomingToken !== user?.refreshToken) {
       throw new ApiError(402, 'your access is denied because of invalid token')
     }
   
-    const {accessToken, refreshToken} = await generateAccessTokenAndRefreshToken(user._id)
+    const {accessToken, newRefreshToken} = await generateAccessTokenAndRefreshToken(user._id)
   
     const option = {
       httpOnly: true,
@@ -200,12 +202,12 @@ const refreshAccessToken = asyncHandler(async(req, res) => {
   
     return res
     .cookie("accessToken", accessToken, option)
-    .cookie("refreshToken", refreshToken, option)
+    .cookie("refreshToken", newRefreshToken, option)
     .status(200)
     .json(
       new ApiResponce(
         200,
-        {  accessToken, refreshToken },
+        {  accessToken, refreshToken : newRefreshToken },
         "generated new accessToken successfully"
       )
     );
